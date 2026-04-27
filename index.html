@@ -453,9 +453,9 @@ function checkDay(){
 function getDay(){return S.days[today()]||{logged:{},taskXP:{}};}
 
 function calcLevel(){
-  let xp=S.totalXP,lv=1,needed=50,spent=0;
+  let xp=Math.max(0,S.totalXP),lv=1,needed=50,spent=0;
   while(xp>=spent+needed){spent+=needed;lv++;needed+=10;}
-  S.level=lv;S.xpNeeded=needed;S.xpIntoLevel=xp-spent;
+  S.level=lv;S.xpNeeded=needed;S.xpIntoLevel=Math.max(0,xp-spent);
 }
 
 function logTime(id){
@@ -463,14 +463,17 @@ function logTime(id){
   const m=parseInt(document.getElementById('m_'+id).value)||0;
   const mins=h*60+m;if(mins<=0)return;
   const day=getDay();
-  day.logged[id] = (day.logged[id] || 0) + mins;
+  day.logged[id]=(day.logged[id]||0)+mins;
   const task=TASKS.find(t=>t.id===id);
-  const extra=Math.max(0,mins-task.target);
-  const xpEarned=Math.floor(extra/60*20);
+  const logged=day.logged[id];
+  const extra=Math.max(0,logged-task.target);
+  const completionXP=logged>=task.target?Math.round(task.target/60*20):0;
+  const extraXP=Math.floor(extra/60*20);
+  const totalTaskXP=completionXP+extraXP;
   const prev=(day.taskXP||{})[id]||0;
   if(!day.taskXP)day.taskXP={};
-  day.taskXP[id]=xpEarned;
-  const diff=xpEarned-prev;
+  day.taskXP[id]=totalTaskXP;
+  const diff=totalTaskXP-prev;
   if(diff>0){S.totalXP+=diff;calcLevel();toast('+'+diff+' XP — NEN POWER UP!');}
   document.getElementById('h_'+id).value='';
   document.getElementById('m_'+id).value='';
@@ -680,6 +683,33 @@ function resetToday(){
   document.getElementById('reset-btn').classList.remove('visible');
   toast('✦ TODAY RESET');
 }
+function applyMidnightPenalty(){
+  const t=today();
+  const day=S.days[t];
+  if(!day||day.penaltyApplied)return;
+  let penalty=0;
+  TASKS.forEach(task=>{
+    const logged=day.logged[task.id]||0;
+    const remaining=Math.max(0,task.target-logged);
+    penalty+=Math.floor(remaining/30)*10;
+  });
+  if(penalty>0){
+    S.totalXP=Math.max(0,S.totalXP-penalty);
+    calcLevel();
+    toast('⚠ -'+penalty+' XP — MISSIONS INCOMPLETE');
+  }
+  day.penaltyApplied=true;
+  save();render();
+}
+
+// Check midnight crossover every minute
+setInterval(()=>{
+  const now=new Date();
+  if(now.getHours()===0&&now.getMinutes()===0){
+    applyMidnightPenalty();
+    checkDay();render();
+  }
+},60000);
 if(sessionStorage.getItem('hxh_auth')==='1') load();
 </script>
 <button class="reset-btn" id="reset-btn" onclick="resetToday()">✦ RESET TODAY ✦</button>
