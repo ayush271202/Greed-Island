@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
+
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -16,6 +17,15 @@
   --red:#c62828;--red2:#ff5252;--purple:#7c4dff;--green:#00e676;
   --text:#dce8ff;--muted:#7a8dbf;
 }
+.reset-btn{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:rgba(198,40,40,0.15);border:1px solid rgba(198,40,40,0.4);
+  border-radius:10px;padding:8px 24px;color:#ff5252;
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;
+  cursor:pointer;z-index:999;backdrop-filter:blur(10px);
+  transition:all 0.3s;opacity:0;pointer-events:none;
+}
+.reset-btn.visible{opacity:1;pointer-events:all}
 html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;overflow-x:hidden}
 
 /* PASSWORD SCREEN */
@@ -647,8 +657,31 @@ function spawnNen(){
     setTimeout(()=>dot.remove(),16000);
   },800);
 }
+// Secret scroll gesture — up+down 2 times reveals reset
+let scrollDirs=[],lastY=0;
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY;
+  const dir=y>lastY?'down':'up';
+  if(scrollDirs[scrollDirs.length-1]!==dir)scrollDirs.push(dir);
+  if(scrollDirs.length>4)scrollDirs.shift();
+  if(scrollDirs.join(',').includes('up,down,up,down')||scrollDirs.join(',').includes('down,up,down,up')){
+    document.getElementById('reset-btn').classList.add('visible');
+    scrollDirs=[];
+    setTimeout(()=>document.getElementById('reset-btn').classList.remove('visible'),4000);
+  }
+  lastY=y;
+});
 
+function resetToday(){
+  if(!confirm('Reset TODAY\'s logged times? This cannot be undone.'))return;
+  const t=today();
+  if(S.days[t]){S.days[t]={logged:{},taskXP:{}};}
+  save();render();
+  document.getElementById('reset-btn').classList.remove('visible');
+  toast('✦ TODAY RESET');
+}
 if(sessionStorage.getItem('hxh_auth')==='1') load();
 </script>
+<button class="reset-btn" id="reset-btn" onclick="resetToday()">✦ RESET TODAY ✦</button>
 </body>
 </html>
