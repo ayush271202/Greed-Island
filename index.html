@@ -453,7 +453,7 @@ function logTime(id){
   const m=parseInt(document.getElementById('m_'+id).value)||0;
   const mins=h*60+m;if(mins<=0)return;
   const day=getDay();
-  day.logged[id]=mins;
+  day.logged[id] = (day.logged[id] || 0) + mins;
   const task=TASKS.find(t=>t.id===id);
   const extra=Math.max(0,mins-task.target);
   const xpEarned=Math.floor(extra/60*20);
